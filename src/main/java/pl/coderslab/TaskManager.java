@@ -1,11 +1,16 @@
 package pl.coderslab;
 import org.apache.commons.lang3.ArrayUtils;
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class TaskManager {
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws IOException {
         String [][] tasks;
         File file  = new File("src/main/java/pl/coderslab/tasks.csv");
         Scanner scanner = new Scanner(file);
@@ -27,69 +32,87 @@ public class TaskManager {
             System.out.println(ConsoleColors.RED + "The task list is empty. Add some tasks first to remove one/" + ConsoleColors.RESET);
         }
         else {
-            System.out.println(ConsoleColors.CYAN + "Type number of task from the list to remove from 1 to " + tasks.length + " from: " + ConsoleColors.RESET);
-            listTask(tasks);
-            if (scanner.hasNextLine()) {
-                String s = scanner.nextLine();
-                try {
-                    int i = Integer.parseInt(s);
-
-
-                    tasks = ArrayUtils.remove(tasks, i - 1);
-
-                } catch (NumberFormatException a) {
-                    System.out.println(ConsoleColors.RED + "It is not a integer number. Try again" + ConsoleColors.RESET);
-                } catch (IndexOutOfBoundsException b) {
-                    System.out.println(ConsoleColors.RED + "It is not an option." + ConsoleColors.RESET);
+            do{
+                System.out.println(ConsoleColors.CYAN + "Type number of task from the list to remove from 1 to " + tasks.length + " from: [Type [x] to quit]" + ConsoleColors.RESET);
+                listTask(tasks);
+                if (scanner.hasNextLine()) {
+                    String s = scanner.nextLine();
+                    if(s.equals("x"))
+                        return tasks;
+                    try {
+                        int i = Integer.parseInt(s);
+                        tasks = ArrayUtils.remove(tasks, i - 1);
+                        writeToDocument(tasks, "src/main/java/pl/coderslab/tasks.csv");
+                        if(tasks.length == 0)
+                        {
+                            System.out.println(ConsoleColors.RED + "The task list is empty. Add some tasks first to remove one/" + ConsoleColors.RESET);
+                            return tasks;
+                        }
+                    } catch (NumberFormatException a) {
+                        System.out.println(ConsoleColors.RED + "It is not a integer number" + ConsoleColors.RESET);
+                    } catch (IndexOutOfBoundsException b) {
+                        System.out.println(ConsoleColors.RED + "It is not an option" + ConsoleColors.RESET);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
+            }while(true);
         }
         return tasks;
     }
-    public static String[][] addTask(String[][] tasks, Scanner scanner)
-    {
-        String [] task = new String[3];
-        System.out.println(ConsoleColors.YELLOW_BOLD + "Type task description" + ConsoleColors.RESET);
-        String s;
-        do{
-            s = scanner.nextLine();
-            if(s.length() == 0)
-                System.out.println(ConsoleColors.RED + "No description. Try once more");
-        }while(s.length() < 1);
-        task[0] = s;
-        while (true)
-        {
-        System.out.println(ConsoleColors.YELLOW_BOLD +"Type task deadline[rrrr-mm-dd]" + ConsoleColors.RESET);
-            task[1] = scanner.nextLine();
-            if(dateIsCorrect(task[1]))
-                break;
-            else
-                System.out.println(ConsoleColors.RED + "Wrong data input" + ConsoleColors.RESET);
-        }
-        System.out.println(ConsoleColors.YELLOW_BOLD +"Type if task is important [true/false]" + ConsoleColors.RESET);
-        do{
-            s = scanner.nextLine();
-            if(!(s.equals("true") || s.equals("false")))
-                System.out.println(ConsoleColors.RED + "You can type only true or false. Try once more");
-        }while(!(s.equals("true") || s.equals("false")));
-        task[2] = s;
-        return addRow(tasks, task);
+    public static String[][] addTask(String[][] tasks, Scanner scanner) throws IOException {
+        String[] task = new String[3];
+        do {
+            System.out.println(ConsoleColors.YELLOW_BOLD + "Type new task description. Charcter \"[,]\" must not be used. [Type [x] to quit]" + ConsoleColors.RESET);
+            String s;
+            boolean correct;
+            do {
+                correct = true;
+                s = scanner.nextLine();
+                if (s.equals("x"))
+                    return tasks;
+                if (s.length() == 0) {
+                    System.out.println(ConsoleColors.RED + "No description. Try once more. [Type [x] to quit]");
+                    correct = false;
+                }
+                if (s.contains(",")) {
+                    System.out.println(ConsoleColors.RED + "Task description contains \"[,]\" character. Try once more. [Type [x] to quit]");
+                    correct = false;
+                }
+            } while (!correct);
+            task[0] = s;
+            while (true) {
+                System.out.println(ConsoleColors.YELLOW_BOLD + "Type task deadline[rrrr-mm-dd]. [Type [x] to quit]" + ConsoleColors.RESET);
+                s = scanner.nextLine();
+                if (s.equals("x"))
+                    return tasks;
+                if (dateIsCorrect(s)) {
+                    task[1] = s;
+                    break;
+                } else
+                    System.out.println(ConsoleColors.RED + "Wrong data input. [Type [x] to quit]" + ConsoleColors.RESET);
+            }
+            System.out.println(ConsoleColors.YELLOW_BOLD + "Type if task is important [true/false]. [Type [x] to quit]" + ConsoleColors.RESET);
+            do {
+                s = scanner.nextLine();
+                if (s.equals("x"))
+                    return tasks;
+                if (!(s.equals("true") || s.equals("false")))
+                    System.out.println(ConsoleColors.RED + "You can type only true or false. Try once more [Type [x] to quit]");
+            } while (!(s.equals("true") || s.equals("false")));
+            task[2] = s;
+            tasks = addRow(tasks, task);
+            writeToDocument(tasks, "src/main/java/pl/coderslab/tasks.csv");
+            System.out.println(ConsoleColors.YELLOW_BACKGROUND + "Task succesfully added" + ConsoleColors.RESET);
+            System.out.println();
+        }while(true);
     }
-    public static String[][] executeOption(String[][] tasks, String option, Scanner scanner)
-    {
+    public static String[][] executeOption(String[][] tasks, String option, Scanner scanner) throws IOException {
         switch (option) {
-            case "add":
-                tasks = addTask(tasks, scanner);
-                break;
-            case "remove":
-                tasks = removeTask(tasks, scanner);
-                break;
-            case "list":
-                listTask(tasks);
-                break;
-            case "exit":
-                finish();
-                break;
+            case "add" -> tasks = addTask(tasks, scanner);
+            case "remove" -> tasks = removeTask(tasks, scanner);
+            case "list" -> listTask(tasks);
+            case "exit" -> finish();
         }
         return tasks;
     }
@@ -150,9 +173,9 @@ public class TaskManager {
         for (int i = 0; i < strs.length; i++) {
             strsN[i] = strs[i];
         }
-        strsN[strsN.length - 1][0] = s[0];
-        strsN[strsN.length - 1][1] = s[1];
-        strsN[strsN.length - 1][2] = s[2];
+        strsN[strsN.length - 1][0] = s[0].trim();
+        strsN[strsN.length - 1][1] = s[1].trim();
+        strsN[strsN.length - 1][2] = s[2].trim();
         return strsN;
     }
     public static boolean dateIsCorrect(String date)
@@ -211,8 +234,24 @@ public class TaskManager {
             return false;
         }
         if(year < 2015)
-            System.out.println(ConsoleColors.RED + "It was long time ago. the task will probably have to be deleted" + ConsoleColors.RESET);
+            System.out.println(ConsoleColors.RED + "It was long time ago. The task will probably have to be deleted" + ConsoleColors.RESET);
 
         return correct;
+    }
+    public static void writeToDocument(String [][] tasks, String path) throws IOException {
+        String task;
+        List<String> toWrite = new ArrayList<>();
+        for (String[] t : tasks) {
+            StringBuilder sb = new StringBuilder();
+            for (int j = 0; j < 3; j++) {
+                sb.append(t[j]);
+                if(j < 2)
+                    sb.append(", ");
+            }
+            task = sb.toString();
+            toWrite.add(task);
+        }
+        Path path1 = Paths.get(path);
+        Files.write(path1, toWrite);
     }
 }
