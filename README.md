@@ -1,5 +1,5 @@
 # Warsztat_PJ
-###Warsztat z Podstaw Javy CodersLab
+##Warsztat z Podstaw Javy CodersLab
 Aplicja została stworzona do modyfikowania listy zadań. Zadania są zapisane w jednej linii jako 3 elementy:
 * Opis zadania - krotki opis, ktory nie moze zawierac przecinkow,
 * Data wykonanie - tak zwany deadline, ktory jest w formacie rrrr-mm-dd,
